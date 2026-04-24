@@ -1,0 +1,8 @@
+aiogram>=3.15.0
+aiohttp
+apscheduler
+google-generativeai
+python-dotenv
+openmeteo-requests
+requests-cache
+retry-requests
