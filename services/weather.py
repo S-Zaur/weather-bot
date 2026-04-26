@@ -5,7 +5,12 @@ from datetime import datetime
 from retry_requests import retry
 from collections import Counter
 from config import LAT, LON
-from services.utils import get_non_zero_ranges, get_weather_desc, get_wind_direction
+from services.utils import (
+    find_first_nonzero_index,
+    get_non_zero_ranges,
+    get_weather_desc,
+    get_wind_direction,
+)
 
 
 async def get_weather_data_for_day() -> openmeteo_sdk.WeatherApiResponse:
@@ -45,7 +50,7 @@ async def get_weather_data_for_day() -> openmeteo_sdk.WeatherApiResponse:
     return responses[0]
 
 
-async def get_rain_data() -> openmeteo_sdk.WeatherApiResponse:
+async def get_predict_rain_data() -> openmeteo_sdk.WeatherApiResponse:
     cache_session = requests_cache.CachedSession(".cache", expire_after=3600)
     retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
     openmeteo = openmeteo_requests.Client(session=retry_session)
@@ -65,8 +70,11 @@ async def get_rain_data() -> openmeteo_sdk.WeatherApiResponse:
             "wind_gusts_10m",
             "rain",
         ],
-        "minutely_15": ["rain", "precipitation_probability"],
-        "forecast_minutely_15": 24,
+        "minutely_15": [
+            "rain",
+            "precipitation_probability",
+        ],
+        "forecast_minutely_15": 12,
     }
 
     responses = openmeteo.weather_api(url, params=params)
@@ -131,10 +139,10 @@ def extract_minutely_data(response: openmeteo_sdk.WeatherApiResponse) -> dict:
         round(response.Minutely15().Variables(1).Values(i), 1)
         for i in range(response.Minutely15().Variables(1).ValuesLength())
     ]
-    return [
-        (rain_minutely[i], precipitation_minutely[i])
-        for i in range(response.Minutely15().Variables(0).ValuesLength())
-    ]
+    return {
+        "rain": rain_minutely,
+        "prob": precipitation_minutely,
+    }
 
 
 def extract_current_data(response: openmeteo_sdk.WeatherApiResponse) -> dict:
@@ -191,6 +199,16 @@ def summarize_all_data(current_data: dict, hourly_data: dict, daily_data: dict) 
 - {rain}"""
 
 
+def summarize_predict_rain(current_data: dict, minutely_data: dict) -> str:
+    current = interpret_current_weather(current_data)
+    minutely = interpret_minutely_weather(minutely_data["rain"], minutely_data["prob"])
+
+    if not minutely:
+        return None
+
+    return f"{current}. {minutely}"
+
+
 def interpret_current_weather(weather: dict) -> str:
     summ = f"{weather['desc']}{weather['emoji']}"
     temp = f"{weather['temp']}°С ощущается как {weather['apparent_temp']}°С"
@@ -203,7 +221,27 @@ def interpret_current_weather(weather: dict) -> str:
     return f"{summ}, {temp}, {wind}, {rain}"
 
 
-def interpret_hourly_weather(temp, wind_speed, wind_direction, wind_gusts, uv_index):
+def interpret_minutely_weather(rain: list[float], prop: list[float]) -> str:
+    if max(rain) == 0:
+        return None
+
+    max_prop = max(prop)
+    max_rain = max(rain)
+
+    time = find_first_nonzero_index(rain) * 15
+    time_suff = "минут" if time < 60 else "час" if time == 60 else "часа"
+
+    time = str(time) if time < 60 else f"{time//60}:{time%60}"
+    return f"Примерно через {time} {time_suff} начнется дождь с интенсивностью до {max_rain} и вероятностью {max_prop}%"
+
+
+def interpret_hourly_weather(
+    temp: list[float],
+    wind_speed: list[float],
+    wind_direction: list[str],
+    wind_gusts: list[float],
+    uv_index: list[float],
+) -> str:
     temp_sum = f"температура от {min(temp)}°С до {max(temp)}°С"
     direction = Counter(wind_direction).most_common(1)[0][0]
     average = round(sum(wind_speed) / len(wind_speed), 1)

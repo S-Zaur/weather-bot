@@ -30,3 +30,10 @@ def get_non_zero_ranges(arr: list) -> list:
             items = list(group)
             ranges.append((items[0][0], items[-1][0] + 1))
     return ranges
+
+
+def find_first_nonzero_index(arr):
+    for index, value in enumerate(arr):
+        if value != 0:
+            return index
+    return None
