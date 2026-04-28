@@ -11,6 +11,7 @@ from services.ai_gen import (
     daily_weather_prompt,
     predict_rain_prompt,
 )
+from handlers.commands import router as coms_router
 from services.weather.advisor import get_full_day_forecast, get_minutely_forecast
 from services.weather.api import get_predict_rain_data, get_weather_data_for_day
 from services.weather.parser import (
@@ -90,6 +91,7 @@ async def main():
     scheduler.add_job(check_rain, trigger="interval", minutes=30)
     scheduler.start()
 
+    dp.include_router(coms_router)
     await dp.start_polling(bot)
 
 
