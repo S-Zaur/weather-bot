@@ -11,16 +11,15 @@ from services.ai_gen import (
     daily_weather_prompt,
     predict_rain_prompt,
 )
-from services.weather import (
-    get_weather_data_for_day,
-    get_predict_rain_data,
+from services.weather.advisor import get_full_day_forecast, get_minutely_forecast
+from services.weather.api import get_predict_rain_data, get_weather_data_for_day
+from services.weather.parser import (
     extract_current_data,
-    extract_minutely_data,
-    extract_hourly_data,
     extract_daily_data,
-    summarize_all_data,
-    summarize_predict_rain,
+    extract_hourly_data,
+    extract_minutely_data,
 )
+
 
 session = AiohttpSession()
 if PROXY:
@@ -35,12 +34,14 @@ async def send_daily_weather():
 
     weather_data = await get_weather_data_for_day()
 
-    current = extract_current_data(weather_data)
     daily = extract_daily_data(weather_data)
     hourly = extract_hourly_data(weather_data)
-    summarized = summarize_all_data(current, hourly, daily)
+    current = extract_current_data(weather_data)
+
+    summarized = get_full_day_forecast(daily, hourly, current)
 
     current_crompt = daily_weather_prompt(summarized)
+
     try:
         advice = await get_ai_advice(current_crompt)
         await bot.send_message(chat_id=CHAT_ID, text=advice)
@@ -55,14 +56,12 @@ async def check_rain():
     alert_key = "last_rain_alert_time"
 
     weather_data = await get_predict_rain_data()
-
     current = extract_current_data(weather_data)
-    minytely15 = extract_minutely_data(weather_data)
-
-    predict = summarize_predict_rain(current, minytely15)
+    minutely = extract_minutely_data(weather_data)
+    predict = get_minutely_forecast(current, minutely)
     if predict is None:
         return
-    
+
     last_alert_str = await get_state(alert_key)
 
     if last_alert_str:
@@ -87,6 +86,7 @@ async def main():
     scheduler = AsyncIOScheduler(timezone="Asia/Yekaterinburg")
 
     scheduler.add_job(send_daily_weather, trigger="cron", hour=7, minute=0)
+    scheduler.add_job(send_daily_weather, trigger="interval", minutes=1)
     scheduler.add_job(check_rain, trigger="interval", minutes=30)
     scheduler.start()
 

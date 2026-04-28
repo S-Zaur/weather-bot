@@ -28,3 +28,9 @@ WMO_WEATHER_CODES = {
     96: {"text": "Гроза с небольшим градом", "emoji": "⚡"},
     99: {"text": "Гроза с сильным градом", "emoji": "⚡"},
 }
+
+
+def get_weather_desc(code: int) -> list[str, str]:
+    return WMO_WEATHER_CODES.get(
+        code, {"text": "Неизвестная погода", "emoji": "❓"}
+    ).values()
