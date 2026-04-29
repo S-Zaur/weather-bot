@@ -3,18 +3,20 @@ import openmeteo_sdk
 import requests_cache
 from retry_requests import retry
 
-from config import LAT, LON
+from db.models import Location
 
 
-async def get_weather_data_for_day() -> openmeteo_sdk.WeatherApiResponse:
+async def get_weather_data_for_day(
+    location: Location,
+) -> openmeteo_sdk.WeatherApiResponse:
     cache_session = requests_cache.CachedSession(".cache", expire_after=3600)
     retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
     openmeteo = openmeteo_requests.Client(session=retry_session)
 
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
-        "latitude": LAT,
-        "longitude": LON,
+        "latitude": location.lat,
+        "longitude": location.lon,
         "timezone": "auto",
         "wind_speed_unit": "ms",
         "forecast_days": 1,
@@ -43,15 +45,15 @@ async def get_weather_data_for_day() -> openmeteo_sdk.WeatherApiResponse:
     return responses[0]
 
 
-async def get_predict_rain_data() -> openmeteo_sdk.WeatherApiResponse:
+async def get_predict_rain_data(location: Location) -> openmeteo_sdk.WeatherApiResponse:
     cache_session = requests_cache.CachedSession(".cache", expire_after=3600)
     retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
     openmeteo = openmeteo_requests.Client(session=retry_session)
 
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
-        "latitude": LAT,
-        "longitude": LON,
+        "latitude": location.lat,
+        "longitude": location.lon,
         "timezone": "auto",
         "wind_speed_unit": "ms",
         "current": [

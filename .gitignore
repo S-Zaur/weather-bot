@@ -177,3 +177,4 @@ pyrightconfig.json
 
 .cache.sqlite
 *.db
+.vscode

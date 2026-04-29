@@ -2,10 +2,13 @@ import asyncio
 from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher
 from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.exceptions import TelegramForbiddenError
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from config import BOT_TOKEN, CHAT_ID, PROXY
-from db.crud import get_state, set_state
-from db.database import init_models
+
+from config import BOT_TOKEN, PROXY
+from db.dao import StateDAO, UserDAO
+from db.database import init_models, async_session
+from db.middleware import DbSessionMiddleware
 from services.ai_gen import (
     get_ai_advice,
     daily_weather_prompt,
@@ -21,7 +24,6 @@ from services.weather.parser import (
     extract_minutely_data,
 )
 
-
 session = AiohttpSession()
 if PROXY:
     session = AiohttpSession(proxy=PROXY)
@@ -32,54 +34,71 @@ dp = Dispatcher()
 
 async def send_daily_weather():
     print("Запуск утренней рассылки...")
+    async with async_session() as session:
 
-    weather_data = await get_weather_data_for_day()
+        user_dao = UserDAO(session)
+        users = await user_dao.get_all_with_locations()
 
-    daily = extract_daily_data(weather_data)
-    hourly = extract_hourly_data(weather_data)
-    current = extract_current_data(weather_data)
+        for user in users:
+            weather_data = await get_weather_data_for_day(user.location)
 
-    summarized = get_full_day_forecast(daily, hourly, current)
+            daily = extract_daily_data(weather_data)
+            hourly = extract_hourly_data(weather_data)
+            current = extract_current_data(weather_data)
 
-    current_crompt = daily_weather_prompt(summarized)
+            summarized = get_full_day_forecast(daily, hourly, current)
 
-    try:
-        advice = await get_ai_advice(current_crompt)
-        await bot.send_message(chat_id=CHAT_ID, text=advice)
-    except RuntimeError as e:
-        await bot.send_message(chat_id=CHAT_ID, text=e)
-        await bot.send_message(chat_id=CHAT_ID, text="Держи просто сухой прогноз:")
-        await bot.send_message(chat_id=CHAT_ID, text=summarized)
+            current_crompt = daily_weather_prompt(summarized)
+
+            try:
+                advice = await get_ai_advice(current_crompt)
+                await bot.send_message(chat_id=user.telegram_id, text=advice)
+            except TelegramForbiddenError:
+                pass
+            except RuntimeError as e:
+                await bot.send_message(chat_id=user.telegram_id, text=e)
+                await bot.send_message(chat_id=user.telegram_id, text="Держи просто сухой прогноз:")
+                await bot.send_message(chat_id=user.telegram_id, text=summarized)
 
 
 async def check_rain():
     print("Проверка дождя")
     alert_key = "last_rain_alert_time"
+    async with async_session() as session:
+        user_dao = UserDAO(session)
+        users = await user_dao.get_all_with_locations()
 
-    weather_data = await get_predict_rain_data()
-    current = extract_current_data(weather_data)
-    minutely = extract_minutely_data(weather_data)
-    predict = get_minutely_forecast(current, minutely)
-    if predict is None:
-        return
+        for user in users:
 
-    last_alert_str = await get_state(alert_key)
+            weather_data = await get_predict_rain_data(user.location)
+            current = extract_current_data(weather_data)
+            minutely = extract_minutely_data(weather_data)
+            predict = get_minutely_forecast(current, minutely)
+            if predict is None:
+                continue
 
-    if last_alert_str:
-        last_alert_time = datetime.fromisoformat(last_alert_str)
-        if datetime.now() - last_alert_time < timedelta(minutes=40):
-            return
+            dao = StateDAO(session)
+            last_alert_str = await dao.get_state(alert_key+str(user.telegram_id))
 
-    prompt = predict_rain_prompt(predict)
-    try:
-        advice = await get_ai_advice(prompt)
-        await bot.send_message(chat_id=CHAT_ID, text=advice)
-    except RuntimeError as e:
-        await bot.send_message(chat_id=CHAT_ID, text=e)
-        await bot.send_message(chat_id=CHAT_ID, text="Скоро дождь, вот чуть подробнее:")
-        await bot.send_message(chat_id=CHAT_ID, text=predict)
-    finally:
-        await set_state(alert_key, datetime.now().isoformat())
+            if last_alert_str:
+                last_alert_time = datetime.fromisoformat(last_alert_str)
+                if datetime.now() - last_alert_time < timedelta(minutes=40):
+                    continue
+
+            prompt = predict_rain_prompt(predict)
+            try:
+                advice = await get_ai_advice(prompt)
+                await bot.send_message(chat_id=user.telegram_id, text=advice)
+            except TelegramForbiddenError:
+                pass
+            except RuntimeError as e:
+                await bot.send_message(chat_id=user.telegram_id, text=e)
+                await bot.send_message(
+                    chat_id=user.telegram_id, text="Скоро дождь, вот чуть подробнее:"
+                )
+                await bot.send_message(chat_id=user.telegram_id, text=predict)
+            finally:
+                await dao.set_state(alert_key+str(user.telegram_id), datetime.now().isoformat())
 
 
 async def main():
@@ -87,10 +106,10 @@ async def main():
     scheduler = AsyncIOScheduler(timezone="Asia/Yekaterinburg")
 
     scheduler.add_job(send_daily_weather, trigger="cron", hour=7, minute=0)
-    scheduler.add_job(send_daily_weather, trigger="interval", minutes=1)
     scheduler.add_job(check_rain, trigger="interval", minutes=30)
     scheduler.start()
 
+    dp.update.middleware(DbSessionMiddleware(session_pool=async_session))
     dp.include_router(coms_router)
     await dp.start_polling(bot)
 
