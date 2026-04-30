@@ -4,6 +4,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.exceptions import TelegramForbiddenError
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import pytz
 
 from config import BOT_TOKEN, PROXY
 from db.dao import StateDAO, UserDAO
@@ -30,16 +31,17 @@ if PROXY:
 
 bot = Bot(token=BOT_TOKEN, session=session)
 dp = Dispatcher()
+tz = pytz.timezone("Asia/Yekaterinburg")
 
 
 async def send_daily_weather():
-    print("Запуск утренней рассылки...")
+    nw = datetime.now(tz).time().replace(second=0, microsecond=0)
     async with async_session() as session:
-
         user_dao = UserDAO(session)
-        users = await user_dao.get_all_with_locations()
+        users = await user_dao.get_all_for_daily_report(nw)
 
         for user in users:
+
             weather_data = await get_weather_data_for_day(user.location)
 
             daily = extract_daily_data(weather_data)
@@ -57,16 +59,18 @@ async def send_daily_weather():
                 pass
             except RuntimeError as e:
                 await bot.send_message(chat_id=user.telegram_id, text=e)
-                await bot.send_message(chat_id=user.telegram_id, text="Держи просто сухой прогноз:")
+                await bot.send_message(
+                    chat_id=user.telegram_id, text="Держи просто сухой прогноз:"
+                )
                 await bot.send_message(chat_id=user.telegram_id, text=summarized)
 
 
 async def check_rain():
-    print("Проверка дождя")
     alert_key = "last_rain_alert_time"
     async with async_session() as session:
         user_dao = UserDAO(session)
-        users = await user_dao.get_all_with_locations()
+        dao = StateDAO(session)
+        users = await user_dao.get_all_for_rain_alert()
 
         for user in users:
 
@@ -77,8 +81,7 @@ async def check_rain():
             if predict is None:
                 continue
 
-            dao = StateDAO(session)
-            last_alert_str = await dao.get_state(alert_key+str(user.telegram_id))
+            last_alert_str = await dao.get_state(alert_key + str(user.telegram_id))
 
             if last_alert_str:
                 last_alert_time = datetime.fromisoformat(last_alert_str)
@@ -98,14 +101,20 @@ async def check_rain():
                 )
                 await bot.send_message(chat_id=user.telegram_id, text=predict)
             finally:
-                await dao.set_state(alert_key+str(user.telegram_id), datetime.now().isoformat())
+                await dao.set_state(
+                    alert_key + str(user.telegram_id), datetime.now().isoformat()
+                )
 
 
 async def main():
     await init_models()
     scheduler = AsyncIOScheduler(timezone="Asia/Yekaterinburg")
 
-    scheduler.add_job(send_daily_weather, trigger="cron", hour=7, minute=0)
+    scheduler.add_job(
+        send_daily_weather,
+        trigger="interval",
+        minutes=1,
+    )
     scheduler.add_job(check_rain, trigger="interval", minutes=30)
     scheduler.start()
 

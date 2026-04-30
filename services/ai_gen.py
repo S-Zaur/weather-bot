@@ -51,7 +51,7 @@ client = genai.Client()
 
 async def get_ai_advice(prompt: str) -> str:
     try:
-        response = client.models.generate_content(
+        response = await client.aio.models.generate_content(
             model="gemini-3.1-flash-lite-preview", contents=prompt
         )
         return response.text

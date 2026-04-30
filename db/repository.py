@@ -7,3 +7,4 @@ class Repository:
         self.state = dao.StateDAO(session)
         self.user = dao.UserDAO(session)
         self.location = dao.LocationDAO(session)
+        self.setting = dao.UserSettingDAO(session)
