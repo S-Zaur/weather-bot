@@ -44,7 +44,7 @@ def get_full_day_forecast(
     day = get_day_period_forecast(hourly, DayPeriod.DAY)
     evening = get_day_period_forecast(hourly, DayPeriod.EVENING)
     rain = get_rain_forecast(daily, hourly)
-    return f"""- Сейчас {datetime.now().strftime("%H:%M")} {current_forecast}
+    return f"""- Сейчас {datetime.now().strftime('%H:%M')} {current_forecast}
 - Утром {morning}
 - Днем {day}
 - Вечером {evening}

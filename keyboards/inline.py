@@ -21,7 +21,7 @@ class SettingsKeyboards:
         )
 
         builder.button(
-            text=f"Время утренней рассылки: {settings.report_time.strftime("%H:%M")}",
+            text=f"Время утренней рассылки: {settings.report_time.strftime('%H:%M')}",
             callback_data=SettingsCallback(action="edit", value="report_time").pack(),
         )
         builder.button(
