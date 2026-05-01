@@ -1,0 +1,12 @@
+[Unit]
+Description=Telegram Weather Bot
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/root/weather_bot
+ExecStart=/root/weather_bot/venv/bin/python main.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
