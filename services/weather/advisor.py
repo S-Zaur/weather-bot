@@ -26,7 +26,7 @@ def get_minutely_forecast(current: CurrentWeather, minutely: MinutelyForecast) -
     if start is None:
         return None
     current_forecast = get_current_forecast(current)
-    return f"{current_forecast}. Примерно в {start} начнется дождь с интенсивностью до {minutely.max_rain} и вероятностью {minutely.max_prob}%"
+    return f"{current_forecast}. Примерно в {start} начнется дождь с интенсивностью до {minutely.max_rain} мм/15мин и вероятностью {minutely.max_prob}%"
 
 
 def _get_hourly_forecast(hourly: HourlyForecast) -> str:
