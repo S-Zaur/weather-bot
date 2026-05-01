@@ -119,7 +119,7 @@ class HourlyForecast:
                     rain_events.append(HourlyForecast(current_event, self.day))
                     current_event = []
         if current_event:
-            rain_events.append(HourlyForecast(current_event))
+            rain_events.append(HourlyForecast(current_event, self.day))
         return rain_events
 
     def get_by_period(self, period: DayPeriod) -> "HourlyForecast":
