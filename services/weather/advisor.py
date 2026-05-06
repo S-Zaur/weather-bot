@@ -43,11 +43,11 @@ def get_full_day_forecast(
     morning = get_day_period_forecast(hourly, DayPeriod.MORNING)
     day = get_day_period_forecast(hourly, DayPeriod.DAY)
     evening = get_day_period_forecast(hourly, DayPeriod.EVENING)
-    rain = get_rain_forecast(daily, hourly)
+    rain = get_rain_forecast(hourly, daily)
     return f"""- Сейчас {datetime.now().strftime('%H:%M')} {current_forecast}
-- Утром {morning}
-- Днем {day}
-- Вечером {evening}
+- {morning}
+- {day}
+- {evening}
 - {rain}"""
 
 
@@ -57,8 +57,8 @@ def get_day_period_forecast(hourly: HourlyForecast, period: DayPeriod) -> str:
     return f"{period.instrumental} ожидается {forecast}"
 
 
-def get_rain_forecast(daily: DailyWeather, hourly: HourlyForecast):
-    if daily.rain_sum == 0:
+def get_rain_forecast(hourly: HourlyForecast, daily: DailyWeather = None):
+    if daily and daily.rain_sum == 0:
         return "Сегодня осадков не ожидается"
     rains = hourly.rain_ranges
     if not rains:
@@ -69,3 +69,14 @@ def get_rain_forecast(daily: DailyWeather, hourly: HourlyForecast):
         for x in rains
     ]
     return f"Сегодня ожидаются дожд{letters[0]} в период{letters[1]}: {', '.join(rains_text)}"
+
+
+def get_tomorrow_forecast(hourly: HourlyForecast) -> str:
+    morning = get_day_period_forecast(hourly, DayPeriod.MORNING)
+    day = get_day_period_forecast(hourly, DayPeriod.DAY)
+    evening = get_day_period_forecast(hourly, DayPeriod.EVENING)
+    rain = get_rain_forecast(hourly)
+    return f"""- Завтра {morning}
+- {day}
+- {evening}
+Завтра {rain}"""

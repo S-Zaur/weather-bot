@@ -21,13 +21,14 @@ def extract_hourly_data(
 ) -> schemas.HourlyForecast:
     hourly = response.Hourly()
     assert hourly.VariablesLength() == 7
+    values_length = hourly.Variables(0).ValuesLength()
     for i in range(7):
-        assert hourly.Variables(i).ValuesLength() == 24
+        assert hourly.Variables(i).ValuesLength() == values_length
     lst = []
     delta = timedelta(hours=1)
     tz = ZoneInfo("Asia/Yekaterinburg")
     time = datetime.fromtimestamp(hourly.Time(), tz=tz)
-    for i in range(24):
+    for i in range(values_length):
         lst.append(
             schemas.HourlyWeather(
                 time,

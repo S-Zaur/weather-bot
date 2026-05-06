@@ -45,6 +45,33 @@ async def get_weather_data_for_day(
     return responses[0]
 
 
+async def get_tomorrow_weather(location: Location) -> openmeteo_sdk.WeatherApiResponse:
+    cache_session = requests_cache.CachedSession(".cache", expire_after=3600)
+    retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
+    openmeteo = openmeteo_requests.Client(session=retry_session)
+
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": location.lat,
+        "longitude": location.lon,
+        "timezone": "auto",
+        "wind_speed_unit": "ms",
+        "forecast_days": 2,
+        "hourly": [
+            "temperature_2m",
+            "wind_speed_10m",
+            "wind_gusts_10m",
+            "wind_direction_10m",
+            "rain",
+            "precipitation_probability",
+            "uv_index",
+        ],
+    }
+
+    responses = openmeteo.weather_api(url, params=params)
+    return responses[0]
+
+
 async def get_predict_rain_data(location: Location) -> openmeteo_sdk.WeatherApiResponse:
     cache_session = requests_cache.CachedSession(".cache", expire_after=3600)
     retry_session = retry(cache_session, retries=5, backoff_factor=0.2)

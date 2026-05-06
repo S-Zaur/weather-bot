@@ -1,6 +1,6 @@
 from collections import Counter
 from dataclasses import dataclass
-from datetime import date, time
+from datetime import date, time, timedelta
 
 from services.enums import DayPeriod, WindDirection
 
@@ -129,6 +129,12 @@ class HourlyForecast:
             ],
             day=self.day,
         )
+
+    @property
+    def tomorrow(self) -> "HourlyForecast":
+        if len(self.hours) != 48:
+            return HourlyForecast([], date())
+        return HourlyForecast(self.hours[24:48], self.day + timedelta(days=1))
 
 
 @dataclass

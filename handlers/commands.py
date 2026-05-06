@@ -88,6 +88,30 @@ async def cmd_rain(message: Message, repo: Repository):
         await message.answer(predict)
 
 
+@router.message(Command("tomorrow"))
+async def cmd_tomorrow(message: Message, repo: Repository):
+    msg = await message.answer("Начинаю сбор данных...")
+    stop_animation = asyncio.Event()
+    animation_task = asyncio.create_task(animate_loading(msg, stop_animation))
+
+    location = (await repo.user.get_with_location(message.from_user.id)).location
+    weather_data = await api.get_tomorrow_weather(location)
+
+    hourly = parser.extract_hourly_data(weather_data)
+    summarized = advisor.get_tomorrow_forecast(hourly)
+
+    current_crompt = daily_weather_prompt(summarized)
+    advice = ""
+    try:
+        advice = await get_ai_advice(current_crompt)
+    except RuntimeError as e:
+        advice = summarized
+    finally:
+        stop_animation.set()
+        await animation_task
+        await msg.edit_text(advice)
+
+
 @router.message(LocationRegistration.waiting_for_location, F.location)
 async def get_location(message: Message, state: FSMContext):
     lat = message.location.latitude
