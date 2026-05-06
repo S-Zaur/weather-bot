@@ -21,9 +21,13 @@ def get_current_forecast(current: CurrentWeather) -> str:
     return f"{summ}, {temp}, {wind}, {rain}"
 
 
-def get_minutely_forecast(current: CurrentWeather, minutely: MinutelyForecast) -> str:
+def get_minutely_forecast(
+    current: CurrentWeather, minutely: MinutelyForecast, threshold: float
+) -> str:
     start = minutely.rain_start_time
     if start is None:
+        return None
+    if minutely.max_rain < threshold:
         return None
     current_forecast = get_current_forecast(current)
     return f"{current_forecast}. Примерно в {start} начнется дождь с интенсивностью до {minutely.max_rain} мм/15мин и вероятностью {minutely.max_prob}%"

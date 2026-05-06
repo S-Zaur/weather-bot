@@ -76,7 +76,9 @@ async def check_rain():
             weather_data = await get_predict_rain_data(user.location)
             current = extract_current_data(weather_data)
             minutely = extract_minutely_data(weather_data)
-            predict = get_minutely_forecast(current, minutely)
+            predict = get_minutely_forecast(
+                current, minutely, user.setting.rain_threshold
+            )
             if predict is None:
                 if user.setting.is_raining_now:
                     await setting_dao.set_is_raining_now(user.telegram_id, False)
