@@ -22,7 +22,7 @@ def get_current_forecast(current: CurrentWeather) -> str:
 
 
 def get_minutely_forecast(
-    current: CurrentWeather, minutely: MinutelyForecast, threshold: float
+    current: CurrentWeather, minutely: MinutelyForecast, threshold: float = 0.1
 ) -> str:
     start = minutely.rain_start_time
     if start is None:
