@@ -39,13 +39,20 @@ async def cmd_start(message: Message, repo: Repository, state: FSMContext):
     )
 
 
-@router.message(Command("now"))
-async def cmd_weather(message: Message, repo: Repository):
+@router.message(Command("today"))
+@router.callback_query(
+    SettingsCallback.filter((F.action == "forecast") & (F.value == "today"))
+)
+async def cmd_weather(message: Message | CallbackQuery, repo: Repository):
+    user_id = message.from_user.id
+    if isinstance(message, CallbackQuery):
+        await message.answer()
+        message = message.message
     msg = await message.answer("Начинаю сбор данных...")
     stop_animation = asyncio.Event()
     animation_task = asyncio.create_task(animate_loading(msg, stop_animation))
 
-    location = (await repo.user.get_with_location(message.from_user.id)).location
+    location = (await repo.user.get_with_location(user_id)).location
     weather_data = await api.get_weather_data_for_day(location)
 
     daily = parser.extract_daily_data(weather_data)
@@ -66,10 +73,17 @@ async def cmd_weather(message: Message, repo: Repository):
 
 
 @router.message(Command("rain"))
-async def cmd_rain(message: Message, repo: Repository):
+@router.callback_query(
+    SettingsCallback.filter((F.action == "forecast") & (F.value == "rain"))
+)
+async def cmd_rain(message: Message | CallbackQuery, repo: Repository):
+    user_id = message.from_user.id
+    if isinstance(message, CallbackQuery):
+        await message.answer()
+        message = message.message
     msg = await message.answer("Узнаем погоду")
 
-    location = (await repo.user.get_with_location(message.from_user.id)).location
+    location = (await repo.user.get_with_location(user_id)).location
     weather_data = await api.get_predict_rain_data(location)
     current = parser.extract_current_data(weather_data)
     minutely = parser.extract_minutely_data(weather_data)
@@ -89,12 +103,20 @@ async def cmd_rain(message: Message, repo: Repository):
 
 
 @router.message(Command("tomorrow"))
-async def cmd_tomorrow(message: Message, repo: Repository):
+@router.callback_query(
+    SettingsCallback.filter((F.action == "forecast") & (F.value == "tomorrow"))
+)
+async def cmd_tomorrow(message: Message | CallbackQuery, repo: Repository):
+    user_id = message.from_user.id
+    if isinstance(message, CallbackQuery):
+        await message.answer()
+        message = message.message
+
     msg = await message.answer("Начинаю сбор данных...")
     stop_animation = asyncio.Event()
     animation_task = asyncio.create_task(animate_loading(msg, stop_animation))
 
-    location = (await repo.user.get_with_location(message.from_user.id)).location
+    location = (await repo.user.get_with_location(user_id)).location
     weather_data = await api.get_tomorrow_weather(location)
 
     hourly = parser.extract_hourly_data(weather_data)
@@ -162,13 +184,20 @@ async def edit_location(message: Message, state: FSMContext):
 
 
 @router.message(Command("settings"))
-async def cmd_settings(message: Message, repo: Repository):
+@router.callback_query(
+    SettingsCallback.filter((F.action == "open") & (F.value == "settings"))
+)
+async def cmd_settings(message: Message | CallbackQuery, repo: Repository):
     user = await repo.user.get_with_setting(message.from_user.id)
+
+    if isinstance(message, CallbackQuery):
+        message = message.message
 
     await message.answer(
         "Здесь ты можешь настроить, как и когда бот будет тебя беспокоить",
         reply_markup=SettingsKeyboards.main_settings(user.setting),
     )
+    await message.delete()
 
 
 @router.callback_query(SettingsCallback.filter(F.action == "edit"))
@@ -274,3 +303,19 @@ async def animate_loading(message: Message, stop_event: asyncio.Event):
                 break
             phrase = get_phrase()
             await message.edit_text(phrase)
+
+
+@router.message(Command("menu"))
+@router.callback_query(
+    SettingsCallback.filter((F.action == "return") & (F.value == "menu"))
+)
+async def cmd_menu(message: Message):
+    delete = False
+    if isinstance(message, CallbackQuery):
+        message = message.message
+        delete = True
+    await message.answer(
+        text="Выбери нужный пункт меню", reply_markup=SettingsKeyboards.main_menu()
+    )
+    if delete:
+        await message.delete()
