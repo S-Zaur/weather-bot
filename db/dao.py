@@ -67,6 +67,7 @@ class UserDAO(BaseDAO[User]):
                 UserSetting.rain_alert_enabled == True,
             )
             .options(joinedload(User.location))
+            .options(joinedload(User.setting))
         )
         result = await self.session.execute(query)
         return result.scalars().all()

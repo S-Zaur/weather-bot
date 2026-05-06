@@ -27,7 +27,7 @@ def get_minutely_forecast(
     start = minutely.rain_start_time
     if start is None:
         return None
-    if minutely.max_rain < threshold:
+    if minutely.max_rain < threshold / 4:
         return None
     current_forecast = get_current_forecast(current)
     return f"{current_forecast}. Примерно в {start} начнется дождь с интенсивностью до {minutely.max_rain} мм/15мин и вероятностью {minutely.max_prob}%"
