@@ -29,7 +29,11 @@ source /root/$PROJECT_NAME/venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# 4. Настраиваем системный сервис
+# 4. Обновление БД
+echo " Выполняю миграции"
+alembic upgrade head
+
+# 5. Настраиваем системный сервис
 echo "⚙️ Настраиваю systemd сервис..."
 # Копируем файл сервиса в систему
 cp bot.service /etc/systemd/system/weather_bot.service
