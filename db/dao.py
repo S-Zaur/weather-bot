@@ -5,7 +5,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import TypeVar, Generic, Type
 
-from db.models import BotState, Location, User, UserSetting
+from db.models import Location, User, UserSetting
 
 ModelType = TypeVar("ModelType")
 
@@ -18,27 +18,6 @@ class BaseDAO(Generic[ModelType]):
     async def get_by_id(self, id: int) -> ModelType:
         result = await self.session.get(self.model, id)
         return result
-
-
-class StateDAO(BaseDAO[BotState]):
-    def __init__(self, session: AsyncSession):
-        super().__init__(session, BotState)
-
-    async def get_state(self, key: str) -> str | None:
-        result = await self.session.execute(select(BotState).where(BotState.key == key))
-        obj = result.scalar_one_or_none()
-        return obj.value if obj else None
-
-    async def set_state(self, key: str, value: str):
-        result = await self.session.execute(select(BotState).where(BotState.key == key))
-        obj = result.scalar_one_or_none()
-
-        if obj:
-            obj.value = value
-        else:
-            self.session.add(BotState(key=key, value=value))
-
-        await self.session.commit()
 
 
 class UserDAO(BaseDAO[User]):
@@ -143,5 +122,11 @@ class UserSettingDAO(BaseDAO[UserSetting]):
     async def change_rain_th(self, user_id: int, threshold: float):
         setting = await self.session.get(UserSetting, user_id)
         setting.rain_threshold = threshold
+        await self.session.commit()
+        return setting
+
+    async def set_is_raining_now(self, user_id: int, is_raining_now: bool):
+        setting = await self.session.get(UserSetting, user_id)
+        setting.is_raining_now = is_raining_now
         await self.session.commit()
         return setting

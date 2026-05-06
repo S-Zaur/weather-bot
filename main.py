@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime
 from aiogram import Bot, Dispatcher
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.exceptions import TelegramForbiddenError
@@ -7,7 +7,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import pytz
 
 from config import BOT_TOKEN, PROXY
-from db.dao import StateDAO, UserDAO
+from db.dao import UserDAO, UserSettingDAO
 from db.database import init_models, async_session
 from db.middleware import DbSessionMiddleware
 from services.ai_gen import (
@@ -66,10 +66,9 @@ async def send_daily_weather():
 
 
 async def check_rain():
-    alert_key = "last_rain_alert_time"
     async with async_session() as session:
         user_dao = UserDAO(session)
-        dao = StateDAO(session)
+        setting_dao = UserSettingDAO(session)
         users = await user_dao.get_all_for_rain_alert()
 
         for user in users:
@@ -79,14 +78,12 @@ async def check_rain():
             minutely = extract_minutely_data(weather_data)
             predict = get_minutely_forecast(current, minutely)
             if predict is None:
+                if user.setting.is_raining_now:
+                    await setting_dao.set_is_raining_now(user.telegram_id, False)
                 continue
 
-            last_alert_str = await dao.get_state(alert_key + str(user.telegram_id))
-
-            if last_alert_str:
-                last_alert_time = datetime.fromisoformat(last_alert_str)
-                if datetime.now() - last_alert_time < timedelta(minutes=40):
-                    continue
+            if user.setting.is_raining_now:
+                continue
 
             prompt = predict_rain_prompt(predict)
             try:
@@ -101,9 +98,7 @@ async def check_rain():
                 )
                 await bot.send_message(chat_id=user.telegram_id, text=predict)
             finally:
-                await dao.set_state(
-                    alert_key + str(user.telegram_id), datetime.now().isoformat()
-                )
+                await setting_dao.set_is_raining_now(user.telegram_id, True)
 
 
 async def main():

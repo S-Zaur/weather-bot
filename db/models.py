@@ -6,13 +6,6 @@ from sqlalchemy import Float, ForeignKey, String, Time
 from db.database import Base
 
 
-class BotState(Base):
-    __tablename__ = "bot_state"
-
-    key: Mapped[str] = mapped_column(primary_key=True)
-    value: Mapped[str] = mapped_column()
-
-
 class User(Base):
     __tablename__ = "users"
 
@@ -48,5 +41,7 @@ class UserSetting(Base):
 
     rain_alert_enabled: Mapped[bool] = mapped_column(default=True)
     rain_threshold: Mapped[float] = mapped_column(default=0.1)
+
+    is_raining_now: Mapped[bool] = mapped_column(default=False)
 
     user: Mapped["User"] = relationship(back_populates="setting")

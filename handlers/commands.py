@@ -67,8 +67,6 @@ async def cmd_weather(message: Message, repo: Repository):
 
 @router.message(Command("rain"))
 async def cmd_rain(message: Message, repo: Repository):
-    alert_key = "last_rain_alert_time"
-
     msg = await message.answer("Узнаем погоду")
 
     location = (await repo.user.get_with_location(message.from_user.id)).location
@@ -85,13 +83,9 @@ async def cmd_rain(message: Message, repo: Repository):
     try:
         advice = await get_ai_advice(prompt)
         await msg.edit_text(advice)
-    except RuntimeError as e:
+    except RuntimeError:
         await msg.edit_text("Скоро дождь, вот чуть подробнее:")
         await message.answer(predict)
-    finally:
-        await repo.state.set_state(
-            alert_key + str(message.from_user.id), datetime.now().isoformat()
-        )
 
 
 @router.message(LocationRegistration.waiting_for_location, F.location)
