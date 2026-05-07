@@ -18,7 +18,7 @@ def get_current_forecast(current: CurrentWeather) -> str:
         if current.rain == 0
         else f"дождь интенсивностью {current.rain} мм/ч"
     )
-    return f"Сейчас {current.time.strftime("%H:%M")} {summ}, {temp}, {wind}, {rain}"
+    return f"Сейчас {current.time.strftime('%H:%M')} {summ}, {temp}, {wind}, {rain}"
 
 
 def get_minutely_forecast(
