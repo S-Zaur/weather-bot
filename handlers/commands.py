@@ -161,8 +161,15 @@ async def get_name(message: Message, repo: Repository, state: FSMContext):
 
 
 @router.message(Command("my_location"))
+@router.callback_query(
+    SettingsCallback.filter((F.action == "show") & (F.value == "geo"))
+)
 async def cmd_my_location(message: Message, repo: Repository):
-    user = await repo.user.get_with_location(message.from_user.id)
+    user_id = message.from_user.id
+    if isinstance(message, CallbackQuery):
+        await message.answer()
+        message = message.message
+    user = await repo.user.get_with_location(user_id)
     if not user:
         await message.answer("Мы с тобой еще не знакомы. Введи /start чтобы начать")
         return
@@ -178,7 +185,13 @@ async def cmd_my_location(message: Message, repo: Repository):
 
 
 @router.message(Command("edit_location"))
+@router.callback_query(
+    SettingsCallback.filter((F.action == "edit") & (F.value == "geo"))
+)
 async def edit_location(message: Message, state: FSMContext):
+    if isinstance(message, CallbackQuery):
+        await message.answer()
+        message = message.message
     await state.set_state(LocationRegistration.waiting_for_location)
     await message.answer("Можешь присылать новую геопозицию (скрепка -> геопозиция)")
 

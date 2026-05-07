@@ -1,12 +1,13 @@
 from collections import Counter
 from dataclasses import dataclass
-from datetime import date, time, timedelta
+from datetime import date, datetime, time, timedelta
 
 from services.enums import DayPeriod, WindDirection
 
 
 @dataclass
 class CurrentWeather:
+    time: datetime
     description: str
     emoji: str
     temp: float

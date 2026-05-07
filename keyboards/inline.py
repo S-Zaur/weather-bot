@@ -12,6 +12,10 @@ class SettingsKeyboards:
             text="Вернуться в меню",
             callback_data=SettingsCallback(action="return", value="menu"),
         )
+        builder.button(
+            text="Изменить местоположение",
+            callback_data=SettingsCallback(action="edit", value="geo"),
+        )
         daily_status = "✅" if settings.daily_report_enabled else "❌"
         builder.button(
             text=f"Утренная рассылка:{daily_status}",
@@ -43,6 +47,10 @@ class SettingsKeyboards:
         builder.button(
             text="Настройки",
             callback_data=SettingsCallback(action="open", value="settings"),
+        )
+        builder.button(
+            text="Посмотреть местопложение",
+            callback_data=SettingsCallback(action="show", value="geo"),
         )
         builder.button(
             text="Посмотреть погоду на сегодня",

@@ -18,7 +18,7 @@ def get_current_forecast(current: CurrentWeather) -> str:
         if current.rain == 0
         else f"дождь интенсивностью {current.rain} мм/ч"
     )
-    return f"{summ}, {temp}, {wind}, {rain}"
+    return f"Сейчас {current.time.strftime("%H:%M")} {summ}, {temp}, {wind}, {rain}"
 
 
 def get_minutely_forecast(
@@ -48,7 +48,7 @@ def get_full_day_forecast(
     day = get_day_period_forecast(hourly, DayPeriod.DAY)
     evening = get_day_period_forecast(hourly, DayPeriod.EVENING)
     rain = get_rain_forecast(hourly, daily)
-    return f"""- Сейчас {datetime.now().strftime('%H:%M')} {current_forecast}
+    return f"""- {current_forecast}
 - {morning}
 - {day}
 - {evening}

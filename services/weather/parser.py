@@ -26,7 +26,7 @@ def extract_hourly_data(
         assert hourly.Variables(i).ValuesLength() == values_length
     lst = []
     delta = timedelta(hours=1)
-    tz = ZoneInfo("Asia/Yekaterinburg")
+    tz = ZoneInfo(response.Timezone().decode("utf-8"))
     time = datetime.fromtimestamp(hourly.Time(), tz=tz)
     for i in range(values_length):
         lst.append(
@@ -54,7 +54,7 @@ def extract_minutely_data(
         assert minutely.Variables(i).ValuesLength() == 12
     lst = []
     delta = timedelta(minutes=15)
-    tz = ZoneInfo("Asia/Yekaterinburg")
+    tz = ZoneInfo(response.Timezone().decode("utf-8"))
     time = datetime.fromtimestamp(minutely.Time(), tz=tz)
     for i in range(12):
         lst.append(
@@ -73,7 +73,9 @@ def extract_current_data(
 ) -> schemas.CurrentWeather:
     current = response.Current()
     assert current.VariablesLength() == 7
+    tz = ZoneInfo(response.Timezone().decode("utf-8"))
     return schemas.CurrentWeather(
+        datetime.now(tz),
         *get_weather_desc(current.Variables(0).Value()),
         round(response.Current().Variables(1).Value(), 1),
         round(response.Current().Variables(2).Value(), 1),
