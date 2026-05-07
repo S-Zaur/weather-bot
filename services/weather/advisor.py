@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from services.enums import DayPeriod
 from services.weather.schemas import (
     CurrentWeather,
@@ -30,7 +28,7 @@ def get_minutely_forecast(
     if minutely.max_rain < threshold / 4:
         return None
     current_forecast = get_current_forecast(current)
-    return f"{current_forecast}. Примерно в {start} начнется дождь с интенсивностью до {minutely.max_rain} мм/15мин и вероятностью {minutely.max_prob}%"
+    return f"{current_forecast}. Примерно в {start} начнется дождь с интенсивностью до {minutely.max_rain*4} мм/ч и вероятностью {minutely.max_prob}%"
 
 
 def _get_hourly_forecast(hourly: HourlyForecast) -> str:
